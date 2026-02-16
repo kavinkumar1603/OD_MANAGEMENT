@@ -4,13 +4,13 @@ import { StatusBar } from "expo-status-bar";
 import React, { useState } from "react";
 import {
     FlatList,
-    SafeAreaView,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
     View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { MOCK_ODS } from "../constants/mock-data";
 
 export default function MyODsScreen() {

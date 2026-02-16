@@ -3,10 +3,11 @@ import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function AdminScreen() {
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
       <LinearGradient
         colors={["#0f2027", "#203a43", "#2c5364"]}
@@ -38,7 +39,7 @@ export default function AdminScreen() {
           This is a placeholder admin page. Wire to your backend roles.
         </Text>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 

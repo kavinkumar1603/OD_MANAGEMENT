@@ -19,7 +19,7 @@ export default function ViewODScreen() {
 
   if (!od) {
     return (
-      <View style={styles.errorContainer}>
+      <SafeAreaView style={styles.errorContainer}>
         <Ionicons name="alert-circle-outline" size={64} color="#ef4444" />
         <Text style={styles.errorText}>OD Application not found</Text>
         <TouchableOpacity
@@ -28,7 +28,7 @@ export default function ViewODScreen() {
         >
           <Text style={styles.backButtonText}>Go Back</Text>
         </TouchableOpacity>
-      </View>
+      </SafeAreaView>
     );
   }
 

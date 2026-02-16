@@ -1,37 +1,85 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 import React, { useState } from "react";
 import {
-  Dimensions,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { auth, db } from "../configs/firebase";
 
 const { height } = Dimensions.get("window");
 
 export default function LoginScreen() {
-  const [userId, setUserId] = useState("");
+  const [emailOrRollNo, setEmailOrRollNo] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  const handleLogin = () => {
-    // TODO: Replace with real authentication against your database
-    const isAdmin = userId.toLowerCase().includes("admin");
-    if (isAdmin) {
-      router.push("/admin");
-    } else {
-      router.push("/home");
+  const handleLogin = async () => {
+    if (!emailOrRollNo || !password) {
+      Alert.alert("Error", "Please enter both User ID and Password");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      let emailToUse = emailOrRollNo.trim();
+
+      // Check if input is a Roll Number (no @ symbol)
+      if (!emailToUse.includes("@")) {
+        // Attempt to lookup email by Roll No
+        const rollNoRef = doc(db, "rollNo_lookup", emailToUse);
+        const rollNoSnap = await getDoc(rollNoRef);
+
+        if (rollNoSnap.exists()) {
+          emailToUse = rollNoSnap.data().email;
+        } else {
+          console.warn("Roll No lookup failed or document does not exist");
+        }
+      }
+
+      await signInWithEmailAndPassword(auth, emailToUse, password);
+
+      // Simple routing check - in a real app, query user role from Firestore
+      if (emailToUse.includes("admin")) {
+        router.replace("/admin");
+      } else {
+        router.replace("/home");
+      }
+    } catch (error: any) {
+      console.error(error);
+      let msg = "Something went wrong";
+      if (
+        error.code === "auth/invalid-credential" ||
+        error.code === "auth/user-not-found" ||
+        error.code === "auth/wrong-password"
+      ) {
+        msg = "Invalid User ID or Password";
+      } else if (error.code === "permission-denied") {
+        msg = "Access denied. Try logging in with Email instead of Roll No.";
+      } else {
+        msg = error.message;
+      }
+      Alert.alert("Login Failed", msg);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
 
       <ScrollView
@@ -57,16 +105,16 @@ export default function LoginScreen() {
             {/* Welcome Text */}
             <View style={styles.welcomeContainer}>
               <Text style={styles.welcomeText}>Welcome back</Text>
-              <Text style={styles.subtitle}>Sign in to continue</Text>
+              <Text style={styles.subtitle}>Sign in with Email or Roll No</Text>
             </View>
 
             {/* User ID Input */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>User ID</Text>
+              <Text style={styles.inputLabel}>User ID / Email</Text>
               <View
                 style={[
                   styles.inputWrapper,
-                  userId && styles.inputWrapperFocused,
+                  emailOrRollNo ? styles.inputWrapperFocused : null,
                 ]}
               >
                 <View style={styles.iconBox}>
@@ -74,12 +122,13 @@ export default function LoginScreen() {
                 </View>
                 <TextInput
                   style={styles.input}
-                  placeholder="Enter your user ID"
+                  placeholder="Enter Roll No (e.g. 24CS001)"
                   placeholderTextColor="#94a3b8"
-                  value={userId}
-                  onChangeText={setUserId}
+                  value={emailOrRollNo}
+                  onChangeText={setEmailOrRollNo}
                   autoCapitalize="none"
                   autoComplete="username"
+                  editable={!isLoading}
                 />
               </View>
             </View>
@@ -90,7 +139,7 @@ export default function LoginScreen() {
               <View
                 style={[
                   styles.inputWrapper,
-                  password && styles.inputWrapperFocused,
+                  password ? styles.inputWrapperFocused : null,
                 ]}
               >
                 <View style={styles.iconBox}>
@@ -104,16 +153,16 @@ export default function LoginScreen() {
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
-                  autoComplete="password"
+                  editable={!isLoading}
                 />
                 <TouchableOpacity
                   onPress={() => setShowPassword(!showPassword)}
-                  style={styles.eyeButton}
+                  style={styles.eyeIcon}
                 >
                   <Ionicons
                     name={showPassword ? "eye-off" : "eye"}
-                    size={18}
-                    color="#64748b"
+                    size={20}
+                    color="#94a3b8"
                   />
                 </TouchableOpacity>
               </View>
@@ -121,125 +170,100 @@ export default function LoginScreen() {
 
             {/* Forgot Password */}
             <TouchableOpacity style={styles.forgotPassword}>
-              <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
             </TouchableOpacity>
 
-            {/* Sign In Button */}
+            {/* Login Button */}
             <TouchableOpacity
-              style={styles.signInButton}
+              style={styles.loginButton}
               onPress={handleLogin}
-              activeOpacity={0.85}
+              disabled={isLoading}
             >
-              <Text style={styles.signInText}>Sign In</Text>
-              <Ionicons name="arrow-forward" size={18} color="#ffffff" />
+              {isLoading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <>
+                  <Text style={styles.loginButtonText}>Sign In</Text>
+                  <Ionicons name="arrow-forward" size={20} color="#fff" />
+                </>
+              )}
             </TouchableOpacity>
-
-            {/* Admin Info */}
-            <View style={styles.infoContainer}>
-              <Ionicons name="information-circle" size={16} color="#94a3b8" />
-              <Text style={styles.infoText}>
-                Admins use your admin credentials
-              </Text>
-            </View>
           </View>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    backgroundColor: "#f8fafc",
   },
   scrollContent: {
-    flexGrow: 1,
     minHeight: height,
+    justifyContent: "center",
+    padding: 24,
   },
   content: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 10, // Reduced padding for more width on small screens
-    paddingVertical: 40,
     position: "relative",
+    alignItems: "center",
   },
   decorativeTop: {
     position: "absolute",
-    top: -50,
+    top: -100,
     right: -50,
     width: 200,
     height: 200,
-    borderRadius: 100,
     backgroundColor: "#eff6ff",
+    borderRadius: 100,
   },
   decorativeBottom: {
     position: "absolute",
-    bottom: -80,
-    left: -80,
-    width: 250,
-    height: 250,
-    borderRadius: 125,
-    backgroundColor: "#f0f9ff",
+    bottom: -50,
+    left: -50,
+    width: 150,
+    height: 150,
+    backgroundColor: "#f1f5f9",
+    borderRadius: 75,
   },
   loginCard: {
     width: "100%",
-    maxWidth: 480, // Increased max-width for wider appearance
-    backgroundColor: "#ffffff",
+    backgroundColor: "#fff",
     borderRadius: 24,
     padding: 32,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 4,
-    zIndex: 1,
-  },
-  logoContainer: {
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  logoBox: {
-    width: 72,
-    height: 72,
-    borderRadius: 20,
-    backgroundColor: "#eff6ff",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#dbeafe",
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.05,
+    shadowRadius: 20,
+    elevation: 5,
   },
   brandingContainer: {
-    alignItems: "center",
     marginBottom: 32,
   },
   brandText: {
-    fontSize: 30,
-    fontWeight: "700",
+    fontSize: 28,
+    fontWeight: "800",
     color: "#0f172a",
     letterSpacing: -0.5,
   },
   brandAccent: {
-    color: "#2563eb",
+    color: "#3b82f6",
   },
   brandTagline: {
-    fontSize: 13,
+    fontSize: 16,
     color: "#64748b",
     marginTop: 4,
     fontWeight: "500",
-    letterSpacing: 0.5,
   },
   welcomeContainer: {
-    marginBottom: 28,
+    marginBottom: 32,
   },
   welcomeText: {
     fontSize: 24,
     fontWeight: "700",
-    color: "#0f172a",
-    marginBottom: 6,
+    color: "#1e293b",
+    marginBottom: 8,
   },
   subtitle: {
     fontSize: 15,
@@ -251,98 +275,63 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#334155",
-    marginBottom: 10,
+    color: "#475569",
+    marginBottom: 8,
+    marginLeft: 4,
   },
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#f8fafc",
-    borderRadius: 12,
-    paddingHorizontal: 4,
-    paddingVertical: 4,
     borderWidth: 1.5,
     borderColor: "#e2e8f0",
+    borderRadius: 16,
+    height: 56,
+    paddingHorizontal: 16,
+    transition: "all 0.2s",
   },
   inputWrapperFocused: {
-    borderColor: "#2563eb",
-    backgroundColor: "#ffffff",
+    borderColor: "#3b82f6",
+    backgroundColor: "#eff6ff",
   },
   iconBox: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#f1f5f9",
-    borderRadius: 8,
-    marginRight: 8,
+    marginRight: 12,
   },
   input: {
     flex: 1,
-    paddingVertical: 10,
-    fontSize: 15,
+    fontSize: 16,
     color: "#0f172a",
     fontWeight: "500",
   },
-  eyeButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
+  eyeIcon: {
+    padding: 4,
   },
   forgotPassword: {
     alignSelf: "flex-end",
-    paddingVertical: 8,
-    marginBottom: 24,
+    marginBottom: 32,
   },
   forgotPasswordText: {
-    fontSize: 14,
-    color: "#2563eb",
+    color: "#3b82f6",
     fontWeight: "600",
+    fontSize: 14,
   },
-  signInButton: {
-    backgroundColor: "#2563eb",
-    borderRadius: 12,
-    paddingVertical: 16,
+  loginButton: {
+    backgroundColor: "#3b82f6",
+    height: 56,
+    borderRadius: 16,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: "#3b82f6",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
     gap: 8,
-    marginBottom: 20,
-    shadowColor: "#2563eb",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.16,
-    shadowRadius: 12,
-    elevation: 4,
   },
-  signInText: {
-    color: "#ffffff",
-    fontSize: 16,
+  loginButtonText: {
+    color: "#fff",
+    fontSize: 18,
     fontWeight: "700",
-    letterSpacing: 0.3,
-  },
-  infoContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: "#f1f5f9",
-  },
-  infoText: {
-    fontSize: 12,
-    color: "#94a3b8",
-    fontWeight: "500",
-  },
-  footer: {
-    marginTop: 32,
-    alignItems: "center",
-    zIndex: 1,
-  },
-  footerText: {
-    fontSize: 12,
-    color: "#94a3b8",
-    fontWeight: "500",
   },
 });
