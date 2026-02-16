@@ -3,53 +3,66 @@ import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React from "react";
 import {
-  FlatList,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    FlatList,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MOCK_ODS } from "../constants/mock-data";
 
 export default function ApprovalsScreen() {
   const router = useRouter();
-  
+
   // Filter for Pending or recently approved/rejected to show tracking
-  const approvalItems = MOCK_ODS.filter(od => od.status !== "Rejected");
+  const approvalItems = MOCK_ODS.filter((od) => od.status !== "Rejected");
 
   const renderApprovalStep = (flow: any[], index: number) => {
     if (!flow) return null;
-    
+
     return (
       <View style={styles.flowContainer}>
         {flow.map((step: any, stepIndex: number) => (
           <View key={stepIndex} style={styles.stepRow}>
             <View style={styles.stepIndicator}>
-              <View 
+              <View
                 style={[
-                  styles.dot, 
-                  step.status === "Approved" ? styles.dotApproved : 
-                  step.status === "Pending" ? styles.dotPending : styles.dotRejected
-                ]} 
+                  styles.dot,
+                  step.status === "Approved"
+                    ? styles.dotApproved
+                    : step.status === "Pending"
+                      ? styles.dotPending
+                      : styles.dotRejected,
+                ]}
               >
-                {step.status === "Approved" && <Ionicons name="checkmark" size={10} color="#fff" />}
+                {step.status === "Approved" && (
+                  <Ionicons name="checkmark" size={10} color="#fff" />
+                )}
               </View>
               {stepIndex < flow.length - 1 && (
-                <View style={[
-                  styles.line,
-                  flow[stepIndex+1].status !== "Pending" && styles.lineActive
-                ]} />
+                <View
+                  style={[
+                    styles.line,
+                    flow[stepIndex + 1].status !== "Pending" &&
+                      styles.lineActive,
+                  ]}
+                />
               )}
             </View>
             <View style={styles.stepContent}>
               <Text style={styles.stepRole}>{step.role}</Text>
               <View style={styles.stepStatusRow}>
-                <Text style={[
-                  styles.stepStatus,
-                  step.status === "Approved" ? styles.textApproved : 
-                  step.status === "Pending" ? styles.textPending : styles.textRejected
-                ]}>
+                <Text
+                  style={[
+                    styles.stepStatus,
+                    step.status === "Approved"
+                      ? styles.textApproved
+                      : step.status === "Pending"
+                        ? styles.textPending
+                        : styles.textRejected,
+                  ]}
+                >
                   {step.status}
                 </Text>
                 {step.date && <Text style={styles.stepDate}>{step.date}</Text>}
@@ -65,17 +78,26 @@ export default function ApprovalsScreen() {
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <View>
-            <Text style={styles.eventTitle}>{item.eventTitle}</Text>
-            <Text style={styles.odId}>OD ID: #{item.id}</Text>
+          <Text style={styles.eventTitle}>{item.eventTitle}</Text>
+          <Text style={styles.odId}>OD ID: #{item.id}</Text>
         </View>
-        <View style={[
-            styles.statusBadge, 
-            { backgroundColor: item.status === "Approved" ? "#dcfce7" : "#fff7ed" }
-        ]}>
-            <Text style={[
-                styles.statusText,
-                { color: item.status === "Approved" ? "#166534" : "#c2410c" }
-            ]}>{item.status}</Text>
+        <View
+          style={[
+            styles.statusBadge,
+            {
+              backgroundColor:
+                item.status === "Approved" ? "#dcfce7" : "#fff7ed",
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.statusText,
+              { color: item.status === "Approved" ? "#166534" : "#c2410c" },
+            ]}
+          >
+            {item.status}
+          </Text>
         </View>
       </View>
 
@@ -85,7 +107,9 @@ export default function ApprovalsScreen() {
       {item.approvalFlow ? (
         renderApprovalStep(item.approvalFlow, 0)
       ) : (
-        <Text style={styles.noFlowText}>Approval flow details not available</Text>
+        <Text style={styles.noFlowText}>
+          Approval flow details not available
+        </Text>
       )}
     </View>
   );
@@ -94,7 +118,10 @@ export default function ApprovalsScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backButton}
+        >
           <Ionicons name="arrow-back" size={24} color="#0f172a" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Approval Status</Text>
@@ -233,7 +260,7 @@ const styles = StyleSheet.create({
   stepContent: {
     flex: 1,
     justifyContent: "flex-start",
-    paddingTop: 0, 
+    paddingTop: 0,
   },
   stepRole: {
     fontSize: 14,

@@ -3,23 +3,28 @@ import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useState } from "react";
 import {
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TouchableOpacity,
-  View,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function SettingsScreen() {
   const router = useRouter();
-  
+
   const [notifications, setNotifications] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
   const [emailAlerts, setEmailAlerts] = useState(true);
 
-  const renderSettingItem = (icon: any, title: str, value: boolean, onToggle: (val: boolean) => void) => (
+  const renderSettingItem = (
+    icon: any,
+    title: str,
+    value: boolean,
+    onToggle: (val: boolean) => void,
+  ) => (
     <View style={styles.settingItem}>
       <View style={styles.settingIconContainer}>
         <Ionicons name={icon} size={20} color="#64748b" />
@@ -37,10 +42,13 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
-      
+
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backButton}
+        >
           <Ionicons name="arrow-back" size={24} color="#0f172a" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Settings</Text>
@@ -48,7 +56,6 @@ export default function SettingsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        
         {/* Profile Section */}
         <View style={styles.section}>
           <Text style={styles.sectionHeader}>Account</Text>
@@ -68,11 +75,26 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionHeader}>Preferences</Text>
           <View style={styles.card}>
-            {renderSettingItem("notifications-outline", "Push Notifications", notifications, setNotifications)}
+            {renderSettingItem(
+              "notifications-outline",
+              "Push Notifications",
+              notifications,
+              setNotifications,
+            )}
             <View style={styles.divider} />
-            {renderSettingItem("mail-outline", "Email Alerts", emailAlerts, setEmailAlerts)}
+            {renderSettingItem(
+              "mail-outline",
+              "Email Alerts",
+              emailAlerts,
+              setEmailAlerts,
+            )}
             <View style={styles.divider} />
-            {renderSettingItem("moon-outline", "Dark Mode", darkMode, setDarkMode)}
+            {renderSettingItem(
+              "moon-outline",
+              "Dark Mode",
+              darkMode,
+              setDarkMode,
+            )}
           </View>
         </View>
 
@@ -82,7 +104,11 @@ export default function SettingsScreen() {
           <View style={styles.card}>
             <TouchableOpacity style={styles.menuItem}>
               <View style={styles.menuIcon}>
-                <Ionicons name="help-circle-outline" size={20} color="#64748b" />
+                <Ionicons
+                  name="help-circle-outline"
+                  size={20}
+                  color="#64748b"
+                />
               </View>
               <Text style={styles.menuText}>Help Center</Text>
               <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
@@ -90,7 +116,11 @@ export default function SettingsScreen() {
             <View style={styles.divider} />
             <TouchableOpacity style={styles.menuItem}>
               <View style={styles.menuIcon}>
-                <Ionicons name="document-text-outline" size={20} color="#64748b" />
+                <Ionicons
+                  name="document-text-outline"
+                  size={20}
+                  color="#64748b"
+                />
               </View>
               <Text style={styles.menuText}>Privacy Policy</Text>
               <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
@@ -99,7 +129,10 @@ export default function SettingsScreen() {
         </View>
 
         {/* Logout */}
-        <TouchableOpacity style={styles.logoutButton} onPress={() => router.replace("/")}>
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={() => router.replace("/")}
+        >
           <Ionicons name="log-out-outline" size={20} color="#ef4444" />
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>

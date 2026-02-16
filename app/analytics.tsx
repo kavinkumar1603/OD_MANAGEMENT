@@ -3,11 +3,11 @@ import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React from "react";
 import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MOCK_ODS } from "../constants/mock-data";
@@ -16,9 +16,9 @@ export default function AnalyticsScreen() {
   const router = useRouter();
 
   const total = MOCK_ODS.length;
-  const approved = MOCK_ODS.filter(od => od.status === "Approved").length;
-  const rejected = MOCK_ODS.filter(od => od.status === "Rejected").length;
-  const pending = MOCK_ODS.filter(od => od.status === "Pending").length;
+  const approved = MOCK_ODS.filter((od) => od.status === "Approved").length;
+  const rejected = MOCK_ODS.filter((od) => od.status === "Rejected").length;
+  const pending = MOCK_ODS.filter((od) => od.status === "Pending").length;
 
   const approvalRate = total > 0 ? Math.round((approved / total) * 100) : 0;
 
@@ -26,12 +26,15 @@ export default function AnalyticsScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backButton}
+        >
           <Ionicons name="arrow-back" size={24} color="#0f172a" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Analytics</Text>
         <TouchableOpacity>
-             <Ionicons name="share-social-outline" size={24} color="#0f172a" />
+          <Ionicons name="share-social-outline" size={24} color="#0f172a" />
         </TouchableOpacity>
       </View>
 
@@ -43,21 +46,29 @@ export default function AnalyticsScreen() {
             <View style={styles.pieBackground} />
             <Text style={styles.pieText}>{approvalRate}%</Text>
           </View>
-          <Text style={styles.overviewSubtitle}>Total Applications: {total}</Text>
+          <Text style={styles.overviewSubtitle}>
+            Total Applications: {total}
+          </Text>
         </View>
 
         {/* Breakdown */}
         <View style={styles.breakdownContainer}>
           <View style={styles.statBox}>
-            <Text style={[styles.statValue, { color: "#22c55e" }]}>{approved}</Text>
+            <Text style={[styles.statValue, { color: "#22c55e" }]}>
+              {approved}
+            </Text>
             <Text style={styles.statLabel}>Approved</Text>
           </View>
           <View style={[styles.statBox, styles.statBoxBorder]}>
-            <Text style={[styles.statValue, { color: "#fbbf24" }]}>{pending}</Text>
+            <Text style={[styles.statValue, { color: "#fbbf24" }]}>
+              {pending}
+            </Text>
             <Text style={styles.statLabel}>Pending</Text>
           </View>
           <View style={styles.statBox}>
-            <Text style={[styles.statValue, { color: "#ef4444" }]}>{rejected}</Text>
+            <Text style={[styles.statValue, { color: "#ef4444" }]}>
+              {rejected}
+            </Text>
             <Text style={styles.statLabel}>Rejected</Text>
           </View>
         </View>
@@ -79,7 +90,7 @@ export default function AnalyticsScreen() {
               <View style={[styles.bar, { height: 40 }]} />
               <Text style={styles.barLabel}>May</Text>
             </View>
-             <View style={styles.barGroup}>
+            <View style={styles.barGroup}>
               <View style={[styles.bar, { height: 100 }]} />
               <Text style={styles.barLabel}>Jun</Text>
             </View>
@@ -147,7 +158,7 @@ const styles = StyleSheet.create({
     borderWidth: 10,
     borderColor: "#4f46e5",
     borderTopColor: "transparent",
-    borderRightColor: "transparent", 
+    borderRightColor: "transparent",
     transform: [{ rotate: "45deg" }],
   },
   pieText: {

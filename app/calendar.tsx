@@ -3,11 +3,11 @@ import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useState } from "react";
 import {
-  FlatList,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    FlatList,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MOCK_ODS } from "../constants/mock-data";
@@ -29,19 +29,30 @@ export default function CalendarScreen() {
 
   const renderEvent = (od: any) => (
     <View key={od.id} style={styles.eventCard}>
-      <View style={[styles.timeStrip, { backgroundColor: od.status === "Approved" ? "#22c55e" : "#cbd5e1" }]} />
+      <View
+        style={[
+          styles.timeStrip,
+          { backgroundColor: od.status === "Approved" ? "#22c55e" : "#cbd5e1" },
+        ]}
+      />
       <View style={styles.eventContent}>
         <Text style={styles.eventTitle}>{od.eventTitle}</Text>
-        <Text style={styles.eventTime}>{od.startTime} - {od.endTime}</Text>
-        <Text style={styles.eventVenue}><Ionicons name="location-outline" size={12} /> {od.venue}</Text>
+        <Text style={styles.eventTime}>
+          {od.startTime} - {od.endTime}
+        </Text>
+        <Text style={styles.eventVenue}>
+          <Ionicons name="location-outline" size={12} /> {od.venue}
+        </Text>
       </View>
     </View>
   );
 
   const renderDateGroup = ({ item }: { item: string }) => {
     const day = new Date(item).getDate();
-    const weekday = new Date(item).toLocaleDateString('en-US', { weekday: 'short' });
-    
+    const weekday = new Date(item).toLocaleDateString("en-US", {
+      weekday: "short",
+    });
+
     return (
       <View style={styles.dateGroup}>
         <View style={styles.dateColumn}>
@@ -59,19 +70,26 @@ export default function CalendarScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backButton}
+        >
           <Ionicons name="arrow-back" size={24} color="#0f172a" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Schedule</Text>
         <TouchableOpacity>
-             <Ionicons name="calendar-outline" size={24} color="#0f172a" />
+          <Ionicons name="calendar-outline" size={24} color="#0f172a" />
         </TouchableOpacity>
       </View>
 
       <View style={styles.monthSelector}>
-        <TouchableOpacity><Ionicons name="chevron-back" size={20} color="#64748b" /></TouchableOpacity>
+        <TouchableOpacity>
+          <Ionicons name="chevron-back" size={20} color="#64748b" />
+        </TouchableOpacity>
         <Text style={styles.monthText}>{selectedMonth}</Text>
-        <TouchableOpacity><Ionicons name="chevron-forward" size={20} color="#64748b" /></TouchableOpacity>
+        <TouchableOpacity>
+          <Ionicons name="chevron-forward" size={20} color="#64748b" />
+        </TouchableOpacity>
       </View>
 
       <FlatList
