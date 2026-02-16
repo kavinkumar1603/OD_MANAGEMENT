@@ -35,24 +35,28 @@ export default function HomeScreen() {
       title: "Approvals",
       description: "Pending approvals",
       color: "#4CAF50",
+      route: "/approvals",
     },
     {
       icon: "calendar",
       title: "Calendar",
       description: "View OD calendar",
       color: "#FF9800",
+      route: "/calendar",
     },
     {
       icon: "stats-chart",
       title: "Analytics",
       description: "OD statistics",
       color: "#2196F3",
+      route: "/analytics",
     },
     {
       icon: "settings",
       title: "Settings",
       description: "App preferences",
       color: "#9C27B0",
+      route: "/settings",
     },
   ];
 

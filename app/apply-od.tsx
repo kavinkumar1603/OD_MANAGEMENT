@@ -1,4 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -35,6 +37,7 @@ export default function ApplyODScreen() {
   // Common State
   const [eventDetails, setEventDetails] = useState("");
   const [requiredInfo, setRequiredInfo] = useState("");
+  const [image, setImage] = useState<string | null>(null);
 
   const addTeamMember = () => {
     setTeamMembers([...teamMembers, { name: "", rollNo: "" }]);
@@ -56,6 +59,62 @@ export default function ApplyODScreen() {
     const updatedMembers = [...teamMembers];
     updatedMembers[index] = { ...updatedMembers[index], [field]: value };
     setTeamMembers(updatedMembers);
+  };
+
+  const pickImage = async (mode: "camera" | "library") => {
+    try {
+      let result;
+      if (mode === "camera") {
+        const permission = await ImagePicker.requestCameraPermissionsAsync();
+        if (!permission.granted) {
+          Alert.alert(
+            "Permission Required",
+            "Please allow camera access to take photos.",
+          );
+          return;
+        }
+        result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [4, 3],
+          quality: 1,
+        });
+      } else {
+        const permission =
+          await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!permission.granted) {
+          Alert.alert(
+            "Permission Required",
+            "Please allow gallery access to upload photos.",
+          );
+          return;
+        }
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [4, 3],
+          quality: 1,
+        });
+      }
+
+      if (!result.canceled) {
+        setImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      Alert.alert("Error", "Failed to pick image");
+    }
+  };
+
+  const handleUpload = () => {
+    Alert.alert("Upload Image", "Choose an option", [
+      { text: "Camera", onPress: () => pickImage("camera") },
+      { text: "Gallery", onPress: () => pickImage("library") },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
+
+  const removeAttachment = () => {
+    setImage(null);
   };
 
   const handleSubmit = () => {
@@ -234,6 +293,39 @@ export default function ApplyODScreen() {
             />
           </View>
 
+          {/* Attachment Upload */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Event Poster / Payment Proof</Text>
+            {!image ? (
+              <TouchableOpacity style={styles.uploadBox} onPress={handleUpload}>
+                <View style={styles.uploadIconContainer}>
+                  <Ionicons
+                    name="cloud-upload-outline"
+                    size={32}
+                    color="#64748b"
+                  />
+                </View>
+                <Text style={styles.uploadText}>Upload Image</Text>
+                <Text style={styles.uploadSubtext}>
+                  Supports JPG, PNG (Max 5MB)
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.uploadedFileContainer}>
+                <View style={styles.fileInfo}>
+                  <Image source={{ uri: image }} style={styles.thumbnail} />
+                  <Text style={styles.fileName}>Image Selected</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={removeAttachment}
+                  style={styles.removeFileButton}
+                >
+                  <Ionicons name="close-circle" size={24} color="#ef4444" />
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+
           <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
             <Text style={styles.submitButtonText}>Submit Application</Text>
           </TouchableOpacity>
@@ -318,6 +410,63 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 15,
     color: "#0f172a",
+  },
+  uploadBox: {
+    borderWidth: 2,
+    borderColor: "#cbd5e1",
+    borderStyle: "dashed",
+    borderRadius: 12,
+    padding: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f8fafc",
+  },
+  uploadIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#e2e8f0",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  uploadText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#334155",
+    marginBottom: 4,
+  },
+  uploadSubtext: {
+    fontSize: 12,
+    color: "#64748b",
+  },
+  uploadedFileContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 10,
+    padding: 12,
+  },
+  fileInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  fileName: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#0f172a",
+  },
+  removeFileButton: {
+    padding: 4,
+  },
+  thumbnail: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
   },
   textArea: {
     minHeight: 100,

@@ -12,6 +12,10 @@ export const MOCK_ODS = [
     endTime: "05:00 PM",
     venue: "Main Auditorium",
     appliedDate: "2024-03-10",
+    approvalFlow: [
+      { role: "Class Advisor", status: "Approved", date: "2024-03-10" },
+      { role: "HOD", status: "Approved", date: "2024-03-11" },
+    ],
   },
   {
     id: "2",
@@ -32,6 +36,10 @@ export const MOCK_ODS = [
       { name: "Sarah Wilson", rollNo: "CS2115" },
     ],
     appliedDate: "2024-03-12",
+    approvalFlow: [
+      { role: "Class Advisor", status: "Approved", date: "2024-03-12" },
+      { role: "HOD", status: "Pending", date: null },
+    ],
   },
   {
     id: "3",
