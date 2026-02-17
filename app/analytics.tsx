@@ -1,8 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import React from "react";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
+import React, { useEffect, useState } from "react";
 import {
+    ActivityIndicator,
     ScrollView,
     StyleSheet,
     Text,
@@ -10,17 +12,55 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MOCK_ODS } from "../constants/mock-data";
+import { auth, db } from "../configs/firebase";
 
 export default function AnalyticsScreen() {
   const router = useRouter();
+  const [ods, setOds] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const total = MOCK_ODS.length;
-  const approved = MOCK_ODS.filter((od) => od.status === "Approved").length;
-  const rejected = MOCK_ODS.filter((od) => od.status === "Rejected").length;
-  const pending = MOCK_ODS.filter((od) => od.status === "Pending").length;
+  useEffect(() => {
+    const fetchODs = () => {
+      const user = auth.currentUser;
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      const q = query(
+        collection(db, "od_requests"),
+        where("userId", "==", user.uid),
+      );
+
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const odList = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setOds(odList);
+        setLoading(false);
+      });
+
+      return unsubscribe;
+    };
+
+    return fetchODs();
+  }, []);
+
+  const total = ods.length;
+  const approved = ods.filter((od) => od.status === "Approved").length;
+  const rejected = ods.filter((od) => od.status === "Rejected").length;
+  const pending = ods.filter((od) => od.status === "Pending").length;
 
   const approvalRate = total > 0 ? Math.round((approved / total) * 100) : 0;
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, styles.center]}>
+        <ActivityIndicator size="large" color="#0000ff" />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -115,6 +155,15 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderBottomWidth: 1,
     borderBottomColor: "#f1f5f9",
+  },
+  backButton: {
+    padding: 8,
+    marginLeft: -8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#0f172a",
   },
   content: {
     padding: 20,
@@ -228,5 +277,9 @@ const styles = StyleSheet.create({
   barLabel: {
     fontSize: 12,
     color: "#64748b",
+  },
+  center: {
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

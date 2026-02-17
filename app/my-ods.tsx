@@ -1,8 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import React, { useState } from "react";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
+import React, { useEffect, useState } from "react";
 import {
+    ActivityIndicator,
     FlatList,
     StyleSheet,
     Text,
@@ -11,20 +13,52 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MOCK_ODS } from "../constants/mock-data";
+import { auth, db } from "../configs/firebase";
 
 export default function MyODsScreen() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
+  const [ods, setOds] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filteredODs = MOCK_ODS.filter(
+  useEffect(() => {
+    const fetchODs = () => {
+      const user = auth.currentUser;
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      const q = query(
+        collection(db, "od_requests"),
+        where("userId", "==", user.uid),
+      );
+
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const odList = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setOds(odList);
+        setLoading(false);
+      });
+
+      return unsubscribe;
+    };
+
+    return fetchODs();
+  }, []);
+
+  const filteredODs = ods.filter(
     (od) =>
-      od.eventTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      od.status.toLowerCase().includes(searchQuery.toLowerCase()),
+      (od.eventTitle || od.eventDetails || "")
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase()) ||
+      (od.status || "").toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
+    switch (status?.toLowerCase()) {
       case "approved":
         return "#4CAF50";
       case "pending":
@@ -36,7 +70,7 @@ export default function MyODsScreen() {
     }
   };
 
-  const renderItem = ({ item }: { item: (typeof MOCK_ODS)[0] }) => (
+  const renderItem = ({ item }: { item: any }) => (
     <TouchableOpacity
       style={styles.odCard}
       onPress={() => router.push(`/view-od/${item.id}`)}
@@ -45,9 +79,11 @@ export default function MyODsScreen() {
       <View style={styles.cardHeader}>
         <View style={styles.titleContainer}>
           <Text style={styles.eventTitle} numberOfLines={1}>
-            {item.eventTitle}
+            {item.eventTitle || item.eventDetails}
           </Text>
-          <Text style={styles.organizer}>{item.organizer}</Text>
+          <Text style={styles.organizer}>
+            {item.organizer || "Self-Organized"}
+          </Text>
         </View>
         <View
           style={[
@@ -66,33 +102,55 @@ export default function MyODsScreen() {
       <View style={styles.cardBody}>
         <View style={styles.infoRow}>
           <Ionicons name="calendar-outline" size={16} color="#64748b" />
-          <Text style={styles.infoText}>{item.date}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Ionicons name="time-outline" size={16} color="#64748b" />
           <Text style={styles.infoText}>
-            {item.startTime} - {item.endTime}
+            {item.date || new Date(item.appliedAt).toLocaleDateString()}
           </Text>
         </View>
-        <View style={styles.infoRow}>
-          <Ionicons name="location-outline" size={16} color="#64748b" />
-          <Text style={styles.infoText}>{item.venue}</Text>
-        </View>
+        {(item.startTime || item.endTime) && (
+          <View style={styles.infoRow}>
+            <Ionicons name="time-outline" size={16} color="#64748b" />
+            <Text style={styles.infoText}>
+              {item.startTime} - {item.endTime}
+            </Text>
+          </View>
+        )}
+        {item.venue && (
+          <View style={styles.infoRow}>
+            <Ionicons name="location-outline" size={16} color="#64748b" />
+            <Text style={styles.infoText}>{item.venue}</Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.cardFooter}>
         <View style={styles.typeTag}>
           <Ionicons
-            name={item.type === "Team" ? "people-outline" : "person-outline"}
+            name={
+              item.type === "Team" || item.type === "team"
+                ? "people-outline"
+                : "person-outline"
+            }
             size={14}
             color="#2563eb"
           />
-          <Text style={styles.typeText}>{item.type}</Text>
+          <Text style={styles.typeText}>
+            {item.type
+              ? item.type.charAt(0).toUpperCase() + item.type.slice(1)
+              : "Individual"}
+          </Text>
         </View>
         <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
       </View>
     </TouchableOpacity>
   );
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.center]}>
+        <ActivityIndicator size="large" color="#0000ff" />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -275,5 +333,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#94a3b8",
     fontWeight: "500",
+  },
+  center: {
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

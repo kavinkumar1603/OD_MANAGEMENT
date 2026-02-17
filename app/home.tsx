@@ -2,7 +2,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import React from "react";
+import { doc, getDoc } from "firebase/firestore";
+import React, { useEffect, useState } from "react";
 import {
     ScrollView,
     StyleSheet,
@@ -11,9 +12,28 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { auth, db } from "../configs/firebase";
 
 export default function HomeScreen() {
   const router = useRouter();
+  const [userName, setUserName] = useState("Student");
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const currentUser = auth.currentUser;
+        if (currentUser) {
+          const userDoc = await getDoc(doc(db, "students", currentUser.uid));
+          if (userDoc.exists()) {
+            setUserName(userDoc.data()?.name || "Student");
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      }
+    };
+    fetchUser();
+  }, []);
 
   const features = [
     {
@@ -61,7 +81,7 @@ export default function HomeScreen() {
   ];
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
       <LinearGradient
         colors={["#667eea", "#764ba2"]}
@@ -73,9 +93,12 @@ export default function HomeScreen() {
           <View style={styles.headerContent}>
             <View>
               <Text style={styles.greeting}>Welcome Back!</Text>
-              <Text style={styles.userName}>Student Name</Text>
+              <Text style={styles.userName}>{userName}</Text>
             </View>
-            <TouchableOpacity style={styles.profileButton}>
+            <TouchableOpacity
+              style={styles.profileButton}
+              onPress={() => router.push("/settings")}
+            >
               <Ionicons name="person-circle" size={40} color="#fff" />
             </TouchableOpacity>
           </View>
@@ -160,7 +183,11 @@ export default function HomeScreen() {
       </ScrollView>
 
       {/* Floating Action Button */}
-      <TouchableOpacity style={styles.fab}>
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => router.push("/apply-od")}
+        activeOpacity={0.8}
+      >
         <LinearGradient
           colors={["#667eea", "#764ba2"]}
           style={styles.fabGradient}
@@ -170,7 +197,7 @@ export default function HomeScreen() {
           <Ionicons name="add" size={30} color="#fff" />
         </LinearGradient>
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 }
 

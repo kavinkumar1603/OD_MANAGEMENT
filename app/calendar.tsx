@@ -1,8 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import React, { useState } from "react";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
+import React, { useEffect, useState } from "react";
 import {
+    ActivityIndicator,
     FlatList,
     StyleSheet,
     Text,
@@ -10,18 +12,50 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MOCK_ODS } from "../constants/mock-data";
+import { auth, db } from "../configs/firebase";
 
 export default function CalendarScreen() {
   const router = useRouter();
   const [selectedMonth, setSelectedMonth] = useState("March 2024");
+  const [ods, setOds] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchODs = () => {
+      const user = auth.currentUser;
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      const q = query(
+        collection(db, "od_requests"),
+        where("userId", "==", user.uid),
+      );
+
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const odList = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setOds(odList);
+        setLoading(false);
+      });
+
+      return unsubscribe;
+    };
+
+    return fetchODs();
+  }, []);
 
   // Group events by date
-  const eventsByDate = MOCK_ODS.reduce((acc: any, od) => {
-    if (!acc[od.date]) {
-      acc[od.date] = [];
+  const eventsByDate = ods.reduce((acc: any, od) => {
+    const dateKey =
+      od.date || (od.appliedAt ? od.appliedAt.split("T")[0] : "Unknown");
+    if (!acc[dateKey]) {
+      acc[dateKey] = [];
     }
-    acc[od.date].push(od);
+    acc[dateKey].push(od);
     return acc;
   }, {});
 
@@ -36,16 +70,26 @@ export default function CalendarScreen() {
         ]}
       />
       <View style={styles.eventContent}>
-        <Text style={styles.eventTitle}>{od.eventTitle}</Text>
+        <Text style={styles.eventTitle}>
+          {od.eventTitle || od.eventDetails}
+        </Text>
         <Text style={styles.eventTime}>
-          {od.startTime} - {od.endTime}
+          {od.startTime || "N/A"} - {od.endTime || "N/A"}
         </Text>
         <Text style={styles.eventVenue}>
-          <Ionicons name="location-outline" size={12} /> {od.venue}
+          <Ionicons name="location-outline" size={12} /> {od.venue || "N/A"}
         </Text>
       </View>
     </View>
   );
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, styles.center]}>
+        <ActivityIndicator size="large" color="#0000ff" />
+      </SafeAreaView>
+    );
+  }
 
   const renderDateGroup = ({ item }: { item: string }) => {
     const day = new Date(item).getDate();
@@ -117,6 +161,15 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderBottomWidth: 1,
     borderBottomColor: "#f1f5f9",
+  },
+  backButton: {
+    padding: 8,
+    marginLeft: -8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#0f172a",
   },
   monthSelector: {
     flexDirection: "row",
@@ -190,5 +243,9 @@ const styles = StyleSheet.create({
   eventVenue: {
     fontSize: 12,
     color: "#94a3b8",
+  },
+  center: {
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

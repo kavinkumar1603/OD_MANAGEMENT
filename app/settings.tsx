@@ -1,8 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import React, { useState } from "react";
+import { signOut } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import React, { useEffect, useState } from "react";
 import {
+    ActivityIndicator,
     ScrollView,
     StyleSheet,
     Switch,
@@ -11,6 +14,7 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { auth, db } from "../configs/firebase";
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -18,10 +22,41 @@ export default function SettingsScreen() {
   const [notifications, setNotifications] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
   const [emailAlerts, setEmailAlerts] = useState(true);
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch logged-in user details
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const currentUser = auth.currentUser;
+        if (currentUser) {
+          const userDoc = await getDoc(doc(db, "students", currentUser.uid));
+          if (userDoc.exists()) {
+            setUser(userDoc.data());
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUser();
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      router.replace("/");
+    } catch (error) {
+      console.error("Error logging out: ", error);
+    }
+  };
 
   const renderSettingItem = (
     icon: any,
-    title: str,
+    title: string,
     value: boolean,
     onToggle: (val: boolean) => void,
   ) => (
@@ -57,19 +92,50 @@ export default function SettingsScreen() {
 
       <ScrollView contentContainerStyle={styles.content}>
         {/* Profile Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionHeader}>Account</Text>
-          <TouchableOpacity style={styles.profileCard}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>JD</Text>
+        {loading ? (
+          <ActivityIndicator size="large" color="#2563eb" />
+        ) : (
+          <View style={styles.section}>
+            <Text style={styles.sectionHeader}>Account Dashboard</Text>
+            <View style={styles.profileCard}>
+              <View style={styles.profileHeader}>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>
+                    {user?.name?.charAt(0).toUpperCase() || "U"}
+                  </Text>
+                </View>
+                <View style={styles.profileInfo}>
+                  <Text style={styles.profileName}>
+                    {user?.name || "User Name"}
+                  </Text>
+                  <Text style={styles.profileEmail}>
+                    {user?.email || "user@example.com"}
+                  </Text>
+                  <View style={styles.badgeContainer}>
+                    <Text style={styles.badgeText}>Student</Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.statsRow}>
+                <View style={styles.statItem}>
+                  <Text style={styles.statLabel}>Roll No</Text>
+                  <Text style={styles.statValue}>{user?.rollNo || "N/A"}</Text>
+                </View>
+                <View style={[styles.statItem, styles.statBorder]}>
+                  <Text style={styles.statLabel}>Class</Text>
+                  <Text style={styles.statValue}>
+                    {user?.className || "N/A"}
+                  </Text>
+                </View>
+                <View style={styles.statItem}>
+                  <Text style={styles.statLabel}>Dept</Text>
+                  <Text style={styles.statValue}>CSE</Text>
+                </View>
+              </View>
             </View>
-            <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>John Doe</Text>
-              <Text style={styles.profileEmail}>john.doe@example.com</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
-          </TouchableOpacity>
-        </View>
+          </View>
+        )}
 
         {/* Preferences */}
         <View style={styles.section}>
@@ -129,10 +195,7 @@ export default function SettingsScreen() {
         </View>
 
         {/* Logout */}
-        <TouchableOpacity
-          style={styles.logoutButton}
-          onPress={() => router.replace("/")}
-        >
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={20} color="#ef4444" />
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
@@ -189,25 +252,36 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   profileCard: {
-    flexDirection: "row",
-    alignItems: "center",
     backgroundColor: "#fff",
-    padding: 16,
-    borderRadius: 12,
+    borderRadius: 16,
+    padding: 20,
     borderWidth: 1,
     borderColor: "#e2e8f0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 2,
+    marginBottom: 20,
+  },
+  profileHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
   },
   avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: "#eff6ff",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 16,
+    borderWidth: 2,
+    borderColor: "#dbeafe",
   },
   avatarText: {
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: "700",
     color: "#2563eb",
   },
@@ -215,13 +289,53 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   profileName: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "700",
     color: "#0f172a",
+    marginBottom: 4,
   },
   profileEmail: {
     fontSize: 13,
     color: "#64748b",
+    marginBottom: 8,
+  },
+  badgeContainer: {
+    backgroundColor: "#f1f5f9",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: "flex-start",
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#475569",
+  },
+  statsRow: {
+    flexDirection: "row",
+    borderTopWidth: 1,
+    borderTopColor: "#f1f5f9",
+    paddingTop: 16,
+  },
+  statItem: {
+    flex: 1,
+    alignItems: "center",
+  },
+  statBorder: {
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: "#f1f5f9",
+  },
+  statLabel: {
+    fontSize: 12,
+    color: "#64748b",
+    fontWeight: "500",
+    marginBottom: 4,
+  },
+  statValue: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#0f172a",
   },
   settingItem: {
     flexDirection: "row",

@@ -18,14 +18,17 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { auth, db } from "../configs/firebase";
 
-const { height } = Dimensions.get("window");
+const { height, width } = Dimensions.get("window");
 
 export default function LoginScreen() {
+  const [isStudent, setIsStudent] = useState(true); // Toggle state
   const [emailOrRollNo, setEmailOrRollNo] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+
+  const themeColor = isStudent ? "#3b82f6" : "#8b5cf6"; // Blue for Student, Purple for Admin
 
   const handleLogin = async () => {
     if (!emailOrRollNo || !password) {
@@ -39,7 +42,7 @@ export default function LoginScreen() {
 
       // Check if input is a Roll Number (no @ symbol)
       if (!emailToUse.includes("@")) {
-        // Attempt to lookup email by Roll No
+        // Attempt to lookup email by Roll No / Staff ID
         const rollNoRef = doc(db, "rollNo_lookup", emailToUse);
         const rollNoSnap = await getDoc(rollNoRef);
 
@@ -50,12 +53,41 @@ export default function LoginScreen() {
         }
       }
 
-      await signInWithEmailAndPassword(auth, emailToUse, password);
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        emailToUse,
+        password,
+      );
+      const uid = userCredential.user.uid;
 
-      // Simple routing check - in a real app, query user role from Firestore
-      if (emailToUse.includes("admin")) {
+      // Check user role from Firestore
+      const adminDoc = await getDoc(doc(db, "admins", uid));
+
+      if (adminDoc.exists()) {
+        if (isStudent) {
+          Alert.alert("Admin Detected", "Redirecting to Admin Dashboard...", [
+            { text: "OK", onPress: () => router.replace("/admin") },
+          ]);
+          return;
+        }
         router.replace("/admin");
       } else {
+        if (!isStudent) {
+          Alert.alert(
+            "Access Denied",
+            "Student accounts are not authorized for Admin access.",
+            [
+              {
+                text: "OK",
+                onPress: async () => {
+                  await auth.signOut();
+                  setIsLoading(false);
+                },
+              },
+            ],
+          );
+          return;
+        }
         router.replace("/home");
       }
     } catch (error: any) {
@@ -80,7 +112,29 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar style="dark" />
+      <StatusBar style={isStudent ? "dark" : "light"} />
+
+      {/* Background Decor */}
+      <View
+        style={[
+          styles.bgCircle,
+          {
+            backgroundColor: isStudent ? "#eff6ff" : "#f3e8ff",
+            top: -100,
+            right: -50,
+          },
+        ]}
+      />
+      <View
+        style={[
+          styles.bgCircle,
+          {
+            backgroundColor: isStudent ? "#f1f5f9" : "#f5f3ff",
+            bottom: -50,
+            left: -50,
+          },
+        ]}
+      />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -89,40 +143,93 @@ export default function LoginScreen() {
         bounces={false}
       >
         <View style={styles.content}>
-          {/* Decorative Elements */}
-          <View style={styles.decorativeTop} />
-          <View style={styles.decorativeBottom} />
+          {/* Role Toggle */}
+          <View style={styles.toggleContainer}>
+            <TouchableOpacity
+              style={[
+                styles.toggleButton,
+                isStudent && styles.toggleButtonActive,
+              ]}
+              onPress={() => setIsStudent(true)}
+            >
+              <Text
+                style={[
+                  styles.toggleText,
+                  isStudent && styles.toggleTextActive,
+                ]}
+              >
+                Student
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.toggleButton,
+                !isStudent && { backgroundColor: "#8b5cf6" },
+              ]}
+              onPress={() => setIsStudent(false)}
+            >
+              <Text
+                style={[
+                  styles.toggleText,
+                  !isStudent && styles.toggleTextActive,
+                ]}
+              >
+                Admin
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-          <View style={styles.loginCard}>
+          <View
+            style={[styles.loginCard, !isStudent && { shadowColor: "#8b5cf6" }]}
+          >
             {/* Branding */}
             <View style={styles.brandingContainer}>
               <Text style={styles.brandText}>
-                OD <Text style={styles.brandAccent}>Approval</Text>
+                OD <Text style={{ color: themeColor }}>Approval</Text>
               </Text>
-              <Text style={styles.brandTagline}>for Students</Text>
+              <Text style={styles.brandTagline}>
+                {isStudent ? "Student Portal" : "Faculty & Admin Portal"}
+              </Text>
             </View>
 
             {/* Welcome Text */}
             <View style={styles.welcomeContainer}>
-              <Text style={styles.welcomeText}>Welcome back</Text>
-              <Text style={styles.subtitle}>Sign in with Email or Roll No</Text>
+              <Text style={styles.welcomeText}>Welcome Back!</Text>
+              <Text style={styles.subtitle}>
+                {isStudent
+                  ? "Enter your Roll Number to continue"
+                  : "Please enter your Staff ID to proceed"}
+              </Text>
             </View>
 
             {/* User ID Input */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>User ID / Email</Text>
+              <Text style={styles.inputLabel}>
+                {isStudent ? "Roll Number" : "Staff ID"}
+              </Text>
               <View
                 style={[
                   styles.inputWrapper,
-                  emailOrRollNo ? styles.inputWrapperFocused : null,
+                  emailOrRollNo
+                    ? {
+                        borderColor: themeColor,
+                        backgroundColor: isStudent ? "#eff6ff" : "#f5f3ff",
+                      }
+                    : null,
                 ]}
               >
                 <View style={styles.iconBox}>
-                  <Ionicons name="person" size={18} color="#64748b" />
+                  <Ionicons
+                    name={
+                      isStudent ? "school-outline" : "shield-checkmark-outline"
+                    }
+                    size={20}
+                    color={themeColor}
+                  />
                 </View>
                 <TextInput
                   style={styles.input}
-                  placeholder="Enter Roll No (e.g. 24CS001)"
+                  placeholder={isStudent ? "e.g. 24CS001" : "e.g. STAFF001"}
                   placeholderTextColor="#94a3b8"
                   value={emailOrRollNo}
                   onChangeText={setEmailOrRollNo}
@@ -139,15 +246,24 @@ export default function LoginScreen() {
               <View
                 style={[
                   styles.inputWrapper,
-                  password ? styles.inputWrapperFocused : null,
+                  password
+                    ? {
+                        borderColor: themeColor,
+                        backgroundColor: isStudent ? "#eff6ff" : "#f5f3ff",
+                      }
+                    : null,
                 ]}
               >
                 <View style={styles.iconBox}>
-                  <Ionicons name="lock-closed" size={18} color="#64748b" />
+                  <Ionicons
+                    name="lock-closed-outline"
+                    size={20}
+                    color={themeColor}
+                  />
                 </View>
                 <TextInput
                   style={styles.input}
-                  placeholder="Enter your password"
+                  placeholder="Enter Password"
                   placeholderTextColor="#94a3b8"
                   value={password}
                   onChangeText={setPassword}
@@ -160,7 +276,7 @@ export default function LoginScreen() {
                   style={styles.eyeIcon}
                 >
                   <Ionicons
-                    name={showPassword ? "eye-off" : "eye"}
+                    name={showPassword ? "eye-off-outline" : "eye-outline"}
                     size={20}
                     color="#94a3b8"
                   />
@@ -170,12 +286,17 @@ export default function LoginScreen() {
 
             {/* Forgot Password */}
             <TouchableOpacity style={styles.forgotPassword}>
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+              <Text style={[styles.forgotPasswordText, { color: themeColor }]}>
+                Forgot Password?
+              </Text>
             </TouchableOpacity>
 
             {/* Login Button */}
             <TouchableOpacity
-              style={styles.loginButton}
+              style={[
+                styles.loginButton,
+                { backgroundColor: themeColor, shadowColor: themeColor },
+              ]}
               onPress={handleLogin}
               disabled={isLoading}
             >
@@ -183,7 +304,9 @@ export default function LoginScreen() {
                 <ActivityIndicator color="#fff" />
               ) : (
                 <>
-                  <Text style={styles.loginButtonText}>Sign In</Text>
+                  <Text style={styles.loginButtonText}>
+                    {isStudent ? "Login as Student" : "Login as Admin"}
+                  </Text>
                   <Ionicons name="arrow-forward" size={20} color="#fff" />
                 </>
               )}
@@ -208,37 +331,59 @@ const styles = StyleSheet.create({
   content: {
     position: "relative",
     alignItems: "center",
+    width: "100%",
   },
-  decorativeTop: {
+  bgCircle: {
     position: "absolute",
-    top: -100,
-    right: -50,
-    width: 200,
-    height: 200,
-    backgroundColor: "#eff6ff",
-    borderRadius: 100,
+    width: 250,
+    height: 250,
+    borderRadius: 125,
   },
-  decorativeBottom: {
-    position: "absolute",
-    bottom: -50,
-    left: -50,
-    width: 150,
-    height: 150,
-    backgroundColor: "#f1f5f9",
-    borderRadius: 75,
+  toggleContainer: {
+    flexDirection: "row",
+    backgroundColor: "#e2e8f0",
+    borderRadius: 16,
+    padding: 4,
+    marginBottom: 24,
+    width: "100%",
+    maxWidth: 320,
+  },
+  toggleButton: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: "center",
+    borderRadius: 12,
+  },
+  toggleButtonActive: {
+    backgroundColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  toggleText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#64748b",
+  },
+  toggleTextActive: {
+    color: "#0f172a",
+    fontWeight: "700",
   },
   loginCard: {
     width: "100%",
     backgroundColor: "#fff",
     borderRadius: 24,
     padding: 32,
-    shadowColor: "#0f172a",
+    shadowColor: "#3b82f6", // Default shadow color
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.1,
     shadowRadius: 20,
-    elevation: 5,
+    elevation: 10,
   },
   brandingContainer: {
+    alignItems: "center",
     marginBottom: 32,
   },
   brandText: {
@@ -247,9 +392,6 @@ const styles = StyleSheet.create({
     color: "#0f172a",
     letterSpacing: -0.5,
   },
-  brandAccent: {
-    color: "#3b82f6",
-  },
   brandTagline: {
     fontSize: 16,
     color: "#64748b",
@@ -257,7 +399,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   welcomeContainer: {
-    marginBottom: 32,
+    marginBottom: 24,
   },
   welcomeText: {
     fontSize: 24,
@@ -288,11 +430,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     height: 56,
     paddingHorizontal: 16,
-    transition: "all 0.2s",
-  },
-  inputWrapperFocused: {
-    borderColor: "#3b82f6",
-    backgroundColor: "#eff6ff",
   },
   iconBox: {
     marginRight: 12,

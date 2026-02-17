@@ -1,8 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import React from "react";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
+import React, { useEffect, useState } from "react";
 import {
+    ActivityIndicator,
     FlatList,
     StyleSheet,
     Text,
@@ -10,16 +12,51 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MOCK_ODS } from "../constants/mock-data";
+import { auth, db } from "../configs/firebase";
 
 export default function ApprovalsScreen() {
   const router = useRouter();
+  const [ods, setOds] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchODs = () => {
+      const user = auth.currentUser;
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      const q = query(
+        collection(db, "od_requests"),
+        where("userId", "==", user.uid),
+      );
+
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const odList = snapshot.docs
+          .map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }))
+          .filter((od: any) => od.status !== "Rejected");
+        setOds(odList);
+        setLoading(false);
+      });
+
+      return unsubscribe;
+    };
+
+    return fetchODs();
+  }, []);
 
   // Filter for Pending or recently approved/rejected to show tracking
-  const approvalItems = MOCK_ODS.filter((od) => od.status !== "Rejected");
+  const approvalItems = ods;
 
   const renderApprovalStep = (flow: any[], index: number) => {
-    if (!flow) return null;
+    if (!flow || flow.length === 0) {
+      // Fallback if no approval flow is present
+      return null;
+    }
 
     return (
       <View style={styles.flowContainer}>
@@ -78,8 +115,10 @@ export default function ApprovalsScreen() {
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <View>
-          <Text style={styles.eventTitle}>{item.eventTitle}</Text>
-          <Text style={styles.odId}>OD ID: #{item.id}</Text>
+          <Text style={styles.eventTitle}>
+            {item.eventTitle || item.eventDetails}
+          </Text>
+          <Text style={styles.odId}>OD ID: #{item.id.substring(0, 8)}</Text>
         </View>
         <View
           style={[
@@ -113,6 +152,14 @@ export default function ApprovalsScreen() {
       )}
     </View>
   );
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, styles.center]}>
+        <ActivityIndicator size="large" color="#0000ff" />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -288,5 +335,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#94a3b8",
     fontStyle: "italic",
+  },
+  center: {
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

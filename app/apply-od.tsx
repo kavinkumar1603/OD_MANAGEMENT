@@ -2,8 +2,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
+import { addDoc, collection } from "firebase/firestore";
 import React, { useState } from "react";
 import {
+    ActivityIndicator,
     Alert,
     ScrollView,
     StyleSheet,
@@ -13,6 +15,7 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { auth, db } from "../configs/firebase";
 
 type ODType = "individual" | "team";
 
@@ -38,6 +41,7 @@ export default function ApplyODScreen() {
   const [eventDetails, setEventDetails] = useState("");
   const [requiredInfo, setRequiredInfo] = useState("");
   const [image, setImage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const addTeamMember = () => {
     setTeamMembers([...teamMembers, { name: "", rollNo: "" }]);
@@ -117,7 +121,7 @@ export default function ApplyODScreen() {
     setImage(null);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     // Basic validation
     if (odType === "individual") {
       if (!name || !rollNo || !eventDetails || !requiredInfo) {
@@ -135,10 +139,39 @@ export default function ApplyODScreen() {
       }
     }
 
-    // Here you would typically send data to backend
-    Alert.alert("Success", "OD Application Submitted Successfully", [
-      { text: "OK", onPress: () => router.back() },
-    ]);
+    setLoading(true);
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        Alert.alert("Error", "You must be logged in to apply.");
+        router.replace("/");
+        return;
+      }
+
+      const data = {
+        userId: currentUser.uid,
+        type: odType,
+        eventDetails,
+        requiredInfo,
+        status: "Pending", // Pending, Approved, Rejected
+        appliedAt: new Date().toISOString(),
+        imageUri: image || null,
+        // Store specific fields based on type
+        details:
+          odType === "individual" ? { name, rollNo } : { members: teamMembers },
+      };
+
+      await addDoc(collection(db, "od_requests"), data);
+
+      Alert.alert("Success", "OD Application Submitted Successfully", [
+        { text: "OK", onPress: () => router.back() },
+      ]);
+    } catch (error: any) {
+      console.error("Error submitting OD:", error);
+      Alert.alert("Submission Failed", error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -326,8 +359,16 @@ export default function ApplyODScreen() {
             )}
           </View>
 
-          <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-            <Text style={styles.submitButtonText}>Submit Application</Text>
+          <TouchableOpacity
+            style={styles.submitButton}
+            onPress={handleSubmit}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.submitButtonText}>Submit Application</Text>
+            )}
           </TouchableOpacity>
         </View>
       </ScrollView>

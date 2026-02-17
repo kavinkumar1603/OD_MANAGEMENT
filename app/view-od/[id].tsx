@@ -1,8 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import React from "react";
+import { doc, getDoc } from "firebase/firestore";
+import React, { useEffect, useState } from "react";
 import {
+    ActivityIndicator,
     ScrollView,
     StyleSheet,
     Text,
@@ -10,12 +12,40 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MOCK_ODS } from "../../constants/mock-data";
+import { db } from "../../configs/firebase";
 
 export default function ViewODScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  const od = MOCK_ODS.find((item) => item.id === id);
+  const [od, setOd] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchOD = async () => {
+      try {
+        if (typeof id === "string") {
+          const docRef = doc(db, "od_requests", id);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            setOd({ id: docSnap.id, ...docSnap.data() });
+          }
+        }
+      } catch (e) {
+        console.error("Error fetching OD:", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchOD();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, styles.center]}>
+        <ActivityIndicator size="large" color="#0000ff" />
+      </SafeAreaView>
+    );
+  }
 
   if (!od) {
     return (
@@ -33,7 +63,7 @@ export default function ViewODScreen() {
   }
 
   const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
+    switch (status?.toLowerCase()) {
       case "approved":
         return "#4CAF50";
       case "pending":
@@ -92,8 +122,12 @@ export default function ViewODScreen() {
 
         {/* Main Info Card */}
         <View style={styles.card}>
-          <Text style={styles.eventTitle}>{od.eventTitle}</Text>
-          <Text style={styles.organizer}>Organized by {od.organizer}</Text>
+          <Text style={styles.eventTitle}>
+            {od.eventTitle || od.eventDetails}
+          </Text>
+          <Text style={styles.organizer}>
+            {od.organizer || "Self-Organized"}
+          </Text>
 
           <View style={styles.divider} />
 
@@ -103,7 +137,12 @@ export default function ViewODScreen() {
             </View>
             <View>
               <Text style={styles.label}>Date</Text>
-              <Text style={styles.value}>{od.date}</Text>
+              <Text style={styles.value}>
+                {od.date ||
+                  (od.appliedAt
+                    ? new Date(od.appliedAt).toLocaleDateString()
+                    : "N/A")}
+              </Text>
             </View>
           </View>
 
@@ -114,7 +153,7 @@ export default function ViewODScreen() {
             <View>
               <Text style={styles.label}>Time</Text>
               <Text style={styles.value}>
-                {od.startTime} - {od.endTime}
+                {od.startTime || "N/A"} - {od.endTime || "N/A"}
               </Text>
             </View>
           </View>
@@ -125,7 +164,7 @@ export default function ViewODScreen() {
             </View>
             <View>
               <Text style={styles.label}>Venue</Text>
-              <Text style={styles.value}>{od.venue}</Text>
+              <Text style={styles.value}>{od.venue || "N/A"}</Text>
             </View>
           </View>
         </View>
@@ -134,29 +173,36 @@ export default function ViewODScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Description</Text>
           <View style={styles.card}>
-            <Text style={styles.descriptionText}>{od.description}</Text>
+            <Text style={styles.descriptionText}>
+              {od.description || od.requiredInfo}
+            </Text>
           </View>
         </View>
 
         {/* Team Members */}
-        {od.teamMembers && (
+        {(od.teamMembers || od.details?.members) && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Team Members</Text>
             <View style={styles.card}>
-              {od.teamMembers.map((member, index) => (
-                <View
-                  key={index}
-                  style={[styles.memberRow, index !== 0 && styles.memberBorder]}
-                >
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>{member.name[0]}</Text>
+              {(od.teamMembers || od.details?.members).map(
+                (member: any, index: number) => (
+                  <View
+                    key={index}
+                    style={[
+                      styles.memberRow,
+                      index !== 0 && styles.memberBorder,
+                    ]}
+                  >
+                    <View style={styles.avatar}>
+                      <Text style={styles.avatarText}>{member.name[0]}</Text>
+                    </View>
+                    <View>
+                      <Text style={styles.memberName}>{member.name}</Text>
+                      <Text style={styles.memberRoll}>{member.rollNo}</Text>
+                    </View>
                   </View>
-                  <View>
-                    <Text style={styles.memberName}>{member.name}</Text>
-                    <Text style={styles.memberRoll}>{member.rollNo}</Text>
-                  </View>
-                </View>
-              ))}
+                ),
+              )}
             </View>
           </View>
         )}
@@ -182,7 +228,13 @@ export default function ViewODScreen() {
 
         {/* Applicant Info */}
         <View style={styles.metaInfo}>
-          <Text style={styles.metaText}>Applied on {od.appliedDate}</Text>
+          <Text style={styles.metaText}>
+            Applied on{" "}
+            {od.appliedDate ||
+              (od.appliedAt
+                ? new Date(od.appliedAt).toLocaleDateString()
+                : "N/A")}
+          </Text>
           <Text style={styles.metaText}>Application ID: #{od.id}</Text>
         </View>
       </ScrollView>
@@ -191,6 +243,10 @@ export default function ViewODScreen() {
 }
 
 const styles = StyleSheet.create({
+  center: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
   container: {
     flex: 1,
     backgroundColor: "#f8fafc",
